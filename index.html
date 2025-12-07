@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UNO Scorekeeper</title>
+<style>
+ body { background:#111; color:#fff; font-family:Arial; margin:20px; }
+ .container { max-width:500px; margin:auto; }
+ input, button { width:100%; padding:12px; margin:6px 0; border-radius:8px; border:none; }
+ input { background:#222; color:#fff; }
+ button { background:#e63946; color:white; font-weight:bold; }
+ .player { margin-top:20px; padding:15px; background:#222; border-radius:10px; }
+ .history { margin-top:20px; background:#222; padding:15px; border-radius:10px; }
+ img { width:120px; display:block; margin:auto; }
+</style>
+</head>
+<body>
+
+<div class="container">
+<img src="https://upload.wikimedia.org/wikipedia/commons/0/0f/UNO_Logo.svg">
+
+<h2>UNO Scorekeeper</h2>
+
+<label>Starting Score:</label>
+<input id="startScore" type="number" value="500" min="1" max="10000">
+
+<label>Player 1 Name:</label>
+<input id="p1name" type="text" value="Player 1">
+<label>Player 2 Name:</label>
+<input id="p2name" type="text" value="Player 2">
+
+<button onclick="startGame()">Start / Reset Game</button>
+
+<div id="scoreboard" style="display:none;">
+
+<div class="player">
+ <h3 id="p1label"></h3>
+ <p id="p1score"></p>
+ <input id="p1round" placeholder="Enter round score">
+ <button onclick="addScore(1)">Subtract From Player 1</button>
+</div>
+
+<div class="player">
+ <h3 id="p2label"></h3>
+ <p id="p2score"></p>
+ <input id="p2round" placeholder="Enter round score">
+ <button onclick="addScore(2)">Subtract From Player 2</button>
+</div>
+
+<button onclick="undoLast()">Undo Last Round</button>
+
+<div class="history">
+ <h3>Round History</h3>
+ <div id="historyList"></div>
+</div>
+
+</div>
+</div>
+
+<script>
+let game = {p1:0, p2:0, history:[]};
+
+function save(){ localStorage.setItem("unoGame", JSON.stringify(game)); }
+function load(){
+ let g = localStorage.getItem("unoGame");
+ if(g){ game = JSON.parse(g); return true; }
+ return false;
+}
+
+function startGame(){
+ game.p1 = parseInt(document.getElementById("startScore").value);
+ game.p2 = parseInt(document.getElementById("startScore").value);
+ game.history = [];
+ save();
+ render();
+}
+
+function addScore(player){
+ let input = document.getElementById(player===1 ? "p1round" : "p2round");
+ let value = parseInt(input.value);
+ if(isNaN(value)) return;
+
+ if(player===1){ game.p1 -= value; }
+ else { game.p2 -= value; }
+
+ game.history.push({player, value});
+ input.value="";
+ save();
+ render();
+}
+
+function undoLast(){
+ let last = game.history.pop();
+ if(!last) return;
+
+ if(last.player===1) game.p1 += last.value;
+ else game.p2 += last.value;
+
+ save();
+ render();
+}
+
+function render(){
+ document.getElementById("scoreboard").style.display = "block";
+
+ let p1n = document.getElementById("p1name").value;
+ let p2n = document.getElementById("p2name").value;
+
+ document.getElementById("p1label").innerText = p1n;
+ document.getElementById("p1score").innerText = "Score: " + game.p1;
+
+ document.getElementById("p2label").innerText = p2n;
+ document.getElementById("p2score").innerText = "Score: " + game.p2;
+
+ let h = "";
+ game.history.slice().reverse().forEach((r,i)=>{
+   h += (r.player===1 ? p1n : p2n) + " - " + r.value + "<br>";
+ });
+ document.getElementById("historyList").innerHTML = h;
+}
+
+if(load()) render();
+</script>
+
+</body>
+</html>
