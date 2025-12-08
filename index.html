@@ -1,127 +1,531 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>UNO Scorekeeper</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>UNO Scorekeeper — Multi Game</title>
 <style>
- body { background:#111; color:#fff; font-family:Arial; margin:20px; }
- .container { max-width:500px; margin:auto; }
- input, button { width:100%; padding:12px; margin:6px 0; border-radius:8px; border:none; }
- input { background:#222; color:#fff; }
- button { background:#e63946; color:white; font-weight:bold; }
- .player { margin-top:20px; padding:15px; background:#222; border-radius:10px; }
- .history { margin-top:20px; background:#222; padding:15px; border-radius:10px; }
- img { width:120px; display:block; margin:auto; }
+:root{
+  --bg:#0f1113; --card:#17191b; --muted:#999; --accent:#e63946; --accent-2:#ffd166;
+  --panel:#111214; --green:#4caf50;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; font-family:Inter, system-ui, Arial, Helvetica, sans-serif;
+  background:linear-gradient(180deg,#070708 0%, #0f1113 100%); color:#fff; padding:16px;
+}
+.app{
+  max-width:820px; margin:0 auto;
+}
+.header{
+  display:flex; gap:12px; align-items:center; margin-bottom:12px;
+}
+.logo{width:84px; height:48px}
+.title{flex:1}
+h1{font-size:20px;margin:0 0 4px}
+.subtitle{font-size:13px;color:var(--muted); margin:0}
+.controls{
+  display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;
+}
+.card{
+  background:var(--card); padding:12px; border-radius:12px; box-shadow:0 2px 8px #0006;
+}
+.left, .right{display:block}
+.grid{
+  display:grid; grid-template-columns:1fr 360px; gap:12px;
+}
+@media (max-width:820px){
+  .grid{grid-template-columns:1fr; }
+  .logo{width:68px;height:38px}
+}
+.form-row{display:flex; gap:8px; margin-bottom:8px}
+.form-row input[type="text"], .form-row input[type="number"], select{
+  flex:1; padding:8px; border-radius:8px; border:1px solid #2b2b2b; background:#0b0c0d; color:#fff;
+}
+.btn{padding:10px 12px; border-radius:8px; border:none; background:var(--accent); color:#fff; font-weight:600}
+.btn.ghost{background:transparent; border:1px solid #2b2b2b}
+.small{padding:8px 10px; font-size:14px}
+.list{max-height:220px; overflow:auto; margin-top:8px}
+.game-item{display:flex; justify-content:space-between; align-items:center; padding:8px; border-radius:8px; margin-bottom:6px; background:#0b0d0e}
+.game-item button{margin-left:6px}
+.players{display:grid; gap:10px; margin-top:8px}
+.player-card{background:#0b0d0e; padding:8px; border-radius:8px}
+.score{font-size:18px; font-weight:700; margin:6px 0}
+.round-input{display:flex; gap:8px}
+.round-input input{flex:1; padding:10px; border-radius:8px; border:1px solid #2b2b2b; background:#0a0b0c; color:#fff}
+.row{display:flex; gap:8px}
+.history{max-height:220px; overflow:auto; margin-top:8px; background:#0b0d0e; padding:8px; border-radius:8px}
+.history-item{padding:6px 8px; border-radius:6px; border-bottom:1px solid #121212; font-size:14px}
+.footer-actions{display:flex; gap:8px; margin-top:10px; flex-wrap:wrap}
+.calculator{display:flex; gap:6px; flex-wrap:wrap; margin-top:8px}
+.calc-btn{padding:8px 10px; border-radius:8px; border:none; background:#161718; color:#fff; font-weight:600}
+.top-row{display:flex; gap:8px; align-items:center; margin-bottom:8px}
+.small-muted{font-size:13px; color:var(--muted)}
+.notice{font-size:13px; color:var(--muted); margin-top:8px}
+.btn-danger{background:#333; color:#fff}
+.confetti-canvas{position:fixed; left:0; top:0; width:100%; height:100%; pointer-events:none; z-index:9999}
+.controls-right{display:flex; gap:8px; align-items:center}
+.icon{width:36px;height:36px; display:inline-flex; align-items:center; justify-content:center; border-radius:8px; background:#0b0d0e}
+.badge{background:#111; padding:6px 8px; border-radius:999px; font-weight:600}
 </style>
 </head>
 <body>
+<div class="app">
+  <div class="header">
+    <img class="logo" src="uno-logo.svg" alt="UNO logo">
+    <div class="title">
+      <h1>UNO Scorekeeper</h1>
+      <p class="subtitle">Multi-game (2–4 players) • Mobile-friendly • Saves automatically</p>
+    </div>
+    <div class="controls-right">
+      <div class="badge" id="currentGameBadge">No game</div>
+    </div>
+  </div>
 
-<div class="container">
-<img src="https://upload.wikimedia.org/wikipedia/commons/0/0f/UNO_Logo.svg">
+  <div class="grid">
+    <div class="left card">
+      <div class="top-row">
+        <div style="flex:1">
+          <div class="form-row">
+            <input type="text" id="newGameName" placeholder="New game name (optional)">
+            <select id="newGamePlayers">
+              <option value="2">2 players</option>
+              <option value="3">3 players</option>
+              <option value="4">4 players</option>
+            </select>
+            <input id="newGameStart" type="number" value="500" min="1" max="10000" style="width:100px">
+          </div>
+          <div style="display:flex; gap:8px; margin-bottom:8px">
+            <button class="btn" onclick="createNewGame()">Create Game</button>
+            <button class="btn ghost small" onclick="refreshGames()">Refresh List</button>
+          </div>
+        </div>
+      </div>
 
-<h2>UNO Scorekeeper</h2>
+      <h3 style="margin-top:10px">Saved Games</h3>
+      <div class="list card" id="gamesList"></div>
 
-<label>Starting Score:</label>
-<input id="startScore" type="number" value="500" min="1" max="10000">
+      <div class="notice">Games are stored in your browser using <strong>localStorage</strong>. You can create, open or delete games. Each game keeps its own players, scores and history.</div>
+    </div>
 
-<label>Player 1 Name:</label>
-<input id="p1name" type="text" value="Player 1">
-<label>Player 2 Name:</label>
-<input id="p2name" type="text" value="Player 2">
+    <div class="right card" id="gamePanel">
+      <div id="noGame" style="text-align:center; padding:20px">
+        <p class="small-muted">Open or create a game to begin.</p>
+      </div>
 
-<button onclick="startGame()">Start / Reset Game</button>
+      <div id="gameArea" style="display:none">
+        <div style="display:flex; gap:8px; align-items:center;">
+          <input type="text" id="gameName" style="flex:1; padding:8px; border-radius:8px; border:1px solid #2b2b2b; background:#0a0b0c; color:#fff" oninput="saveAll()">
+          <button class="btn ghost small" onclick="saveAll()">Save</button>
+        </div>
 
-<div id="scoreboard" style="display:none;">
+        <div class="players" id="playersContainer"></div>
 
-<div class="player">
- <h3 id="p1label"></h3>
- <p id="p1score"></p>
- <input id="p1round" placeholder="Enter round score">
- <button onclick="addScore(1)">Subtract From Player 1</button>
+        <div class="footer-actions">
+          <button class="btn" onclick="applyRound()">Apply Round (Subtract)</button>
+          <button class="btn undo small" onclick="undoLastRound()">Undo Last Round</button>
+          <button class="btn btn-danger small" onclick="resetCurrentGame()">Reset Scores</button>
+          <button class="btn ghost small" onclick="archiveCurrentGame()">Archive Game</button>
+        </div>
+
+        <h4 style="margin-top:12px">Calculator</h4>
+        <div class="calculator" id="calculator">
+          <!-- buttons inserted by JS -->
+        </div>
+
+        <h4 style="margin-top:12px">Round History</h4>
+        <div class="history" id="historyList"></div>
+      </div>
+    </div>
+  </div>
 </div>
 
-<div class="player">
- <h3 id="p2label"></h3>
- <p id="p2score"></p>
- <input id="p2round" placeholder="Enter round score">
- <button onclick="addScore(2)">Subtract From Player 2</button>
-</div>
-
-<button onclick="undoLast()">Undo Last Round</button>
-
-<div class="history">
- <h3>Round History</h3>
- <div id="historyList"></div>
-</div>
-
-</div>
-</div>
+<canvas class="confetti-canvas" id="confCanvas"></canvas>
 
 <script>
-let game = {p1:0, p2:0, history:[]};
+/* Data model:
+games: array of {id, name, numPlayers, startScore, players:[{name,score}], history:[{playerIndex,amount,timestamp}], archived:boolean}
+currentGameId: id or null
+*/
+const STORAGE_KEY = "uno_games_v1";
+let games = [];
+let currentGameId = null;
+let focusedRoundInput = null;
 
-function save(){ localStorage.setItem("unoGame", JSON.stringify(game)); }
-function load(){
- let g = localStorage.getItem("unoGame");
- if(g){ game = JSON.parse(g); return true; }
- return false;
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+
+function loadAll(){
+  const raw = localStorage.getItem(STORAGE_KEY);
+  games = raw ? JSON.parse(raw) : [];
+  const lastOpen = localStorage.getItem(STORAGE_KEY + "_current");
+  currentGameId = lastOpen || null;
+  refreshGames();
+  if(currentGameId) openGame(currentGameId);
+}
+function saveAll(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(games));
+  if(currentGameId) localStorage.setItem(STORAGE_KEY + "_current", currentGameId);
+  else localStorage.removeItem(STORAGE_KEY + "_current");
+  renderGamesList();
+  renderCurrentBadge();
 }
 
-function startGame(){
- game.p1 = parseInt(document.getElementById("startScore").value);
- game.p2 = parseInt(document.getElementById("startScore").value);
- game.history = [];
- save();
- render();
+function refreshGames(){
+  loadFromMemory(); // reload from storage to reflect external edits
+  renderGamesList();
+}
+function loadFromMemory(){
+  const raw = localStorage.getItem(STORAGE_KEY);
+  games = raw ? JSON.parse(raw) : games;
 }
 
-function addScore(player){
- let input = document.getElementById(player===1 ? "p1round" : "p2round");
- let value = parseInt(input.value);
- if(isNaN(value)) return;
-
- if(player===1){ game.p1 -= value; }
- else { game.p2 -= value; }
-
- game.history.push({player, value});
- input.value="";
- save();
- render();
+function renderGamesList(){
+  const div = document.getElementById("gamesList");
+  div.innerHTML = "";
+  if(games.length===0){ div.innerHTML = "<div class='small-muted'>No saved games yet</div>"; return; }
+  games.forEach(g=>{
+    if(g.archived) return;
+    const el = document.createElement("div"); el.className="game-item";
+    const left = document.createElement("div"); left.style.display="flex"; left.style.flexDirection="column";
+    const title = document.createElement("div"); title.textContent = g.name || ("Game "+g.id);
+    title.style.fontWeight = "700";
+    const meta = document.createElement("div"); meta.textContent = `${g.numPlayers} players • start ${g.startScore}`;
+    meta.style.fontSize="12px"; meta.style.color="#8a8a8a";
+    left.appendChild(title); left.appendChild(meta);
+    const actions = document.createElement("div");
+    const openBtn = document.createElement("button"); openBtn.className="btn ghost small"; openBtn.textContent="Open"; openBtn.onclick = ()=>openGame(g.id);
+    const delBtn = document.createElement("button"); delBtn.className="btn ghost small"; delBtn.textContent="Delete"; delBtn.onclick = ()=>{ if(confirm("Delete game?")) deleteGame(g.id); };
+    actions.appendChild(openBtn); actions.appendChild(delBtn);
+    el.appendChild(left); el.appendChild(actions);
+    div.appendChild(el);
+  });
 }
 
-function undoLast(){
- let last = game.history.pop();
- if(!last) return;
-
- if(last.player===1) game.p1 += last.value;
- else game.p2 += last.value;
-
- save();
- render();
+function createNewGame(){
+  const name = document.getElementById("newGameName").value.trim();
+  const numPlayers = parseInt(document.getElementById("newGamePlayers").value);
+  let start = parseInt(document.getElementById("newGameStart").value) || 500;
+  if(start>10000) start=10000;
+  const g = {
+    id: uid(),
+    name: name || ("Game " + (games.length+1)),
+    numPlayers,
+    startScore: start,
+    players: [],
+    history: [],
+    archived: false
+  };
+  for(let i=0;i<numPlayers;i++){
+    g.players.push({ name: "Player " + (i+1), score: start });
+  }
+  games.unshift(g);
+  currentGameId = g.id;
+  saveAll();
+  openGame(g.id);
 }
 
-function render(){
- document.getElementById("scoreboard").style.display = "block";
-
- let p1n = document.getElementById("p1name").value;
- let p2n = document.getElementById("p2name").value;
-
- document.getElementById("p1label").innerText = p1n;
- document.getElementById("p1score").innerText = "Score: " + game.p1;
-
- document.getElementById("p2label").innerText = p2n;
- document.getElementById("p2score").innerText = "Score: " + game.p2;
-
- let h = "";
- game.history.slice().reverse().forEach((r,i)=>{
-   h += (r.player===1 ? p1n : p2n) + " - " + r.value + "<br>";
- });
- document.getElementById("historyList").innerHTML = h;
+function deleteGame(id){
+  games = games.filter(x=>x.id!==id);
+  if(currentGameId===id) { currentGameId = null; document.getElementById("gameArea").style.display="none"; document.getElementById("noGame").style.display="block"; }
+  saveAll();
 }
 
-if(load()) render();
+function openGame(id){
+  const g = games.find(x=>x.id===id);
+  if(!g) return alert("Game not found");
+  currentGameId = id;
+  document.getElementById("noGame").style.display="none";
+  document.getElementById("gameArea").style.display="block";
+  document.getElementById("gameName").value = g.name;
+  renderPlayers();
+  renderHistory();
+  saveAll();
+}
+
+function renderPlayers(){
+  const container = document.getElementById("playersContainer");
+  container.innerHTML = "";
+  const g = games.find(x=>x.id===currentGameId);
+  if(!g) return;
+  for(let i=0;i<g.numPlayers;i++){
+    const p = g.players[i];
+    const pc = document.createElement("div"); pc.className="player-card";
+    pc.innerHTML = `
+      <div style="display:flex; gap:8px; align-items:center;">
+        <input type="text" value="${escapeHtml(p.name)}" data-player="${i}" oninput="updatePlayerName(event)" style="flex:1; padding:8px; border-radius:8px; border:1px solid #2b2b2b; background:#0a0b0c; color:#fff">
+        <div style="width:96px; text-align:center; font-weight:700;" class="score" id="score_${i}">Score: ${p.score}</div>
+      </div>
+      <div class="round-input">
+        <input type="number" placeholder="Round points to subtract" data-round="${i}" onfocus="setFocusedInput(this)" style="padding:10px;">
+        <button class="btn small" onclick="addRoundToPlayer(${i})">Subtract</button>
+      </div>
+    `;
+    container.appendChild(pc);
+  }
+  // ensure calculator buttons exist
+  renderCalculator();
+}
+
+function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function updatePlayerName(e){
+  const idx = parseInt(e.target.getAttribute("data-player"));
+  const g = games.find(x=>x.id===currentGameId);
+  g.players[idx].name = e.target.value || ("Player "+(idx+1));
+  saveAll();
+  renderHistory();
+  renderPlayers(); // update badges
+}
+
+function addRoundToPlayer(idx){
+  const input = document.querySelector(`input[data-round="${idx}"]`);
+  const val = parseInt(input.value);
+  if(isNaN(val) || val<0) return;
+  const g = games.find(x=>x.id===currentGameId);
+  const cur = g.players[idx].score;
+  const newScore = Math.max(cur - val, 0);
+  const actualSubtracted = cur - newScore; // may be less if floor at 0
+  g.players[idx].score = newScore;
+  g.history.push({ playerIndex: idx, amount: actualSubtracted, ts: Date.now() });
+  input.value = "";
+  saveAll();
+  renderPlayers();
+  renderHistory();
+  if(newScore===0) triggerWin(idx);
+}
+
+function applyRound(){
+  // Apply all filled round inputs at once
+  const g = games.find(x=>x.id===currentGameId);
+  if(!g) return;
+  const inputs = document.querySelectorAll('input[data-round]');
+  let any=false;
+  inputs.forEach(inp=>{
+    const idx = parseInt(inp.getAttribute("data-round"));
+    const val = parseInt(inp.value);
+    if(isNaN(val) || val<=0) return;
+    any=true;
+    const cur = g.players[idx].score;
+    const newScore = Math.max(cur - val, 0);
+    const actualSubtracted = cur - newScore;
+    g.players[idx].score = newScore;
+    g.history.push({ playerIndex: idx, amount: actualSubtracted, ts: Date.now() });
+    inp.value = "";
+    if(newScore===0) triggerWin(idx);
+  });
+  if(any){ saveAll(); renderPlayers(); renderHistory(); }
+}
+
+function undoLastRound(){
+  const g = games.find(x=>x.id===currentGameId);
+  if(!g || g.history.length===0) return;
+  const last = g.history.pop();
+  g.players[last.playerIndex].score = g.players[last.playerIndex].score + last.amount;
+  saveAll();
+  renderPlayers();
+  renderHistory();
+}
+
+function undoLastRoundPublic(){ undoLastRound(); } // alias
+
+function resetCurrentGame(){
+  if(!confirm("Reset scores to starting value?")) return;
+  const g = games.find(x=>x.id===currentGameId);
+  g.players.forEach(p=>p.score = g.startScore);
+  g.history = [];
+  saveAll();
+  renderPlayers();
+  renderHistory();
+}
+
+function archiveCurrentGame(){
+  if(!confirm("Archive this game? It will be removed from active list.")) return;
+  const g = games.find(x=>x.id===currentGameId);
+  g.archived = true;
+  currentGameId = null;
+  document.getElementById("gameArea").style.display="none";
+  document.getElementById("noGame").style.display="block";
+  saveAll();
+}
+
+function renderHistory(){
+  const g = games.find(x=>x.id===currentGameId);
+  const div = document.getElementById("historyList");
+  div.innerHTML = "";
+  if(!g) return;
+  const arr = g.history.slice().reverse();
+  if(arr.length===0){ div.innerHTML = "<div class='small-muted'>No rounds yet</div>"; return; }
+  arr.forEach(h=>{
+    const p = g.players[h.playerIndex];
+    const el = document.createElement("div"); el.className="history-item";
+    const t = new Date(h.ts);
+    el.innerHTML = `<strong>${escapeHtml(p.name)}</strong> −${h.amount} <span style="float:right; color:#8a8a8a; font-size:12px">${t.toLocaleString()}</span>`;
+    div.appendChild(el);
+  });
+}
+
+function saveAllAndRender(){
+  saveAll();
+  renderPlayers();
+  renderHistory();
+}
+
+function addRoundToPlayerIndex(idx, amount){
+  const inp = document.querySelector(`input[data-round="${idx}"]`);
+  if(!inp) return;
+  const cur = parseInt(inp.value) || 0;
+  inp.value = cur + amount;
+  inp.focus();
+  setFocusedInput(inp);
+}
+
+function setFocusedInput(el){
+  focusedRoundInput = el;
+}
+
+function renderCalculator(){
+  const container = document.getElementById("calculator");
+  container.innerHTML = "";
+  const amounts = [1,2,3,4,5,6,7,8,9,20,50];
+  amounts.forEach(a=>{
+    const b = document.createElement("button");
+    b.className = "calc-btn";
+    b.textContent = "+" + a;
+    b.onclick = ()=>onCalc(a);
+    container.appendChild(b);
+  });
+  const clear = document.createElement("button");
+  clear.className="calc-btn";
+  clear.textContent="Clear";
+  clear.onclick = ()=>{ if(focusedRoundInput) focusedRoundInput.value=""; };
+  container.appendChild(clear);
+
+  const addToAll = document.createElement("button");
+  addToAll.className="calc-btn";
+  addToAll.textContent="+Apply to all";
+  addToAll.onclick = ()=>{ // add current focused value to all round inputs
+    const v = parseInt(focusedRoundInput ? focusedRoundInput.value || 0 : 0);
+    if(isNaN(v) || v===0) return;
+    const inputs = document.querySelectorAll('input[data-round]');
+    inputs.forEach(inp=>{
+      inp.value = (parseInt(inp.value||0) + v);
+    });
+  };
+  container.appendChild(addToAll);
+}
+
+function onCalc(amount){
+  if(focusedRoundInput){
+    const cur = parseInt(focusedRoundInput.value) || 0;
+    focusedRoundInput.value = cur + amount;
+    focusedRoundInput.focus();
+  } else {
+    // if no focused input, add to first player's input if exists
+    const first = document.querySelector('input[data-round]');
+    if(first){
+      const cur = parseInt(first.value) || 0;
+      first.value = cur + amount;
+      first.focus();
+      focusedRoundInput = first;
+    } else {
+      alert("Open a game and focus a player's round input first.");
+    }
+  }
+}
+
+/* UI helpers */
+function renderCurrentBadge(){
+  const badge = document.getElementById("currentGameBadge");
+  if(currentGameId){
+    const g = games.find(x=>x.id===currentGameId);
+    badge.textContent = g ? (g.name || "Open game") : "Open game";
+  } else badge.textContent = "No game";
+}
+
+/* Win confetti */
+let confettiCtx, confettiCanvas, confettiParticles=[];
+function setupConfetti(){
+  confettiCanvas = document.getElementById("confCanvas");
+  confettiCanvas.width = window.innerWidth;
+  confettiCanvas.height = window.innerHeight;
+  confettiCtx = confettiCanvas.getContext("2d");
+  window.addEventListener("resize", ()=>{ confettiCanvas.width = window.innerWidth; confettiCanvas.height = window.innerHeight; });
+  requestAnimationFrame(confettiFrame);
+}
+function triggerWin(playerIdx){
+  // small confetti burst and sound
+  spawnConfetti(120);
+  playWinSound();
+}
+function spawnConfetti(n){
+  const w = confettiCanvas.width, h = confettiCanvas.height;
+  for(let i=0;i<n;i++){
+    confettiParticles.push({
+      x: Math.random()*w,
+      y: -10 - Math.random()*200,
+      vx: (Math.random()-0.5)*6,
+      vy: 2 + Math.random()*6,
+      ang: Math.random()*360,
+      spin: (Math.random()-0.5)*0.2,
+      size: 6 + Math.random()*10,
+      color: ["#e63946","#ffd166","#2ec4b6","#ff9f1c","#8ecae6"][Math.floor(Math.random()*5)]
+    });
+  }
+}
+function confettiFrame(){
+  confettiCtx.clearRect(0,0,confettiCanvas.width, confettiCanvas.height);
+  for(let i=confettiParticles.length-1;i>=0;i--){
+    const p = confettiParticles[i];
+    p.x += p.vx; p.y += p.vy; p.vy += 0.08; p.ang += p.spin;
+    confettiCtx.save();
+    confettiCtx.translate(p.x,p.y);
+    confettiCtx.rotate(p.ang);
+    confettiCtx.fillStyle = p.color;
+    confettiCtx.fillRect(-p.size/2, -p.size/2, p.size, p.size*0.6);
+    confettiCtx.restore();
+    if(p.y > confettiCanvas.height + 50){ confettiParticles.splice(i,1); }
+  }
+  requestAnimationFrame(confettiFrame);
+}
+
+/* Sound */
+let audioCtx;
+function playWinSound(){
+  try{
+    if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = "sine";
+    o.frequency.setValueAtTime(880, audioCtx.currentTime);
+    g.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.2, audioCtx.currentTime + 0.01);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start();
+    o.frequency.exponentialRampToValueAtTime(440, audioCtx.currentTime + 0.25);
+    g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.6);
+    o.stop(audioCtx.currentTime + 0.7);
+  }catch(e){ /* ignore */ }
+}
+
+/* Init */
+function initUI(){
+  loadAll();
+  renderCalculator();
+  setupConfetti();
+  renderCurrentBadge();
+}
+initUI();
+
+/* helpers for saving game name changes */
+document.getElementById("gameName").addEventListener("input", function(e){
+  const g = games.find(x=>x.id===currentGameId);
+  if(!g) return;
+  g.name = e.target.value || ("Game "+g.id);
+  saveAll();
+  renderGamesList();
+  renderCurrentBadge();
+});
+
 </script>
-
 </body>
 </html>
