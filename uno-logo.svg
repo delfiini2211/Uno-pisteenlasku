@@ -1,0 +1,8 @@
+<!--?xml version="1.0" encoding="UTF-8"?-->
+<svg width="300" height="120" viewBox="0 0 300 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <rect rx="12" width="300" height="120" fill="#C40000"></rect>
+  <g transform="translate(0,6)">
+    <ellipse cx="150" cy="60" rx="136" ry="52" fill="#C40000"></ellipse>
+    <text x="150" y="75" font-family="Arial Black, Helvetica, sans-serif" font-size="56" fill="#FFD700" text-anchor="middle">UNO</text>
+  </g>
+</svg>
